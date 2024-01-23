@@ -34,7 +34,7 @@ bot.on('message', (msg: Message) => {
   } else {
     bot.sendMessage(
       chatId,
-      `current avaliable: \`\`\`json\n${JSON.stringify(map)}\n\`\`\``,
+      `current avaliable: \`\`\`json\n${JSON.stringify(Array.from(map.entries()), null, 2)}\n\`\`\``,
       {
         parse_mode: 'MarkdownV2',
       }
