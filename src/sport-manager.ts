@@ -146,7 +146,7 @@ class SportManager {
     const formatDate = (date: string) => {
       const rawDate = new Date(date);
       let weekday = ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'][rawDate.getDay()]
-      return `${weekday} ${rawDate.getDate()}.${rawDate.getMonth() + 1}.${rawDate.getFullYear()}`
+      return `${weekday} ${rawDate.getDate() + 1 >= 10 ? '' : '0'}${rawDate.getDate()}.${rawDate.getMonth() + 1 >= 10 ? '' : '0'}${rawDate.getMonth() + 1}.${rawDate.getFullYear()}`
     }
 
 
