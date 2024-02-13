@@ -5,6 +5,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import _ from 'lodash';
 import dotenv from 'dotenv';
 import TelegramBot, { Message } from 'node-telegram-bot-api';
+import moment from 'moment';
 
 dotenv.config();
 
@@ -34,7 +35,11 @@ bot.on('message', (msg: Message) => {
   } else {
     bot.sendMessage(
       chatId,
-      `current avaliable: \`\`\`json\n${JSON.stringify(Array.from(map.entries()), null, 2)}\n\`\`\``,
+      `current avaliable: \`\`\`json\n${JSON.stringify(
+        Array.from(map.entries()),
+        null,
+        2
+      )}\n\`\`\``,
       {
         parse_mode: 'MarkdownV2',
       }
@@ -172,10 +177,12 @@ const decodeToken = (item: any, bearer = false) => {
 };
 
 const getLessons = async () => {
-  const { data } = await axios.get(
-    'https://my.itmo.ru/api/sport/my_sport/schedule/available?building_id=273&date_start=2024-01-22&date_end=2024-01-26',
-    await getConfig()
-  );
+  const url = `https://my.itmo.ru/api/sport/my_sport/schedule/available?building_id=273&date_start=${moment().format(
+    'YYYY-MM-DD'
+  )}&date_end=${moment().add(21, 'days').format('YYYY-MM-DD')}`;
+  console.log(url);
+
+  const { data } = await axios.get(url, await getConfig());
 
   const lessons = data?.result.flatMap(
     (item: { lessons: any }) => item.lessons
