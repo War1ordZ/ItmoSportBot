@@ -7,6 +7,6 @@ export const SIGN_FOR_SPORT = 'https://my.itmo.ru/api/sport/my_sport/sign_for_le
 
 export const TOKEN_COOKIE_NAME = 'auth._token.itmoId';
 
-export const BOT_DATA_FILENAME = 'userdata'
+export const BOT_DATA_FILENAME = 'userdata.json'
 
-export const FETCH_INTERVAL = 5000;
+export const FETCH_INTERVAL = 1000;

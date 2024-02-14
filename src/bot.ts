@@ -4,9 +4,13 @@ import storage from './storage-handler'
 import User, { States } from "./User";
 import { SIGN_FOR_SPORT } from "./constants";
 import axios from "axios";
+import sportManager from "./sport-manager";
 
 const REGISTER_CALLBACK = 'register'
 const FETCH_TOKEN_CALLBACK = 'fetch_token'
+const APPLY_FOR_LESSON_CALLBACK = 'apply_for_lesson'
+const AUTO_APPLY_FOR_LESSON_CALLBACK = 'aafl'
+const AUTO_APPLY_FOR_LESSON_DISABLE_CALLBACK = 'daafl'
 
 class Bot {
   instance: TelegramBot | null = null;
@@ -21,7 +25,7 @@ class Bot {
       const options: SendMessageOptions = {
         reply_markup: {
           inline_keyboard: [
-            [{ text: 'Вход в ITMO.ID', callback_data: REGISTER_CALLBACK }]
+            [{ text: 'Вход в ITMO.ID', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }]
           ]
         }
       };
@@ -37,6 +41,69 @@ class Bot {
     if (!message) {
       await respond("Нормально общайся ёпта");
       return;
+    }
+
+    if (message === '/help') {
+      await respond('Бот для упрощения записи на физкультуру\n\nСписок команд:\n'
+        + '/help - Вывести это меню\n'
+        + '/profile - Вывести информацию о пользователе\n'
+        + '/auto - Открыть меню автозаписи');
+      return;
+    }
+
+    if (message === '/profile') {
+      const getState = (state: States) => {
+        if (state === States.UNREGISTERED) {
+          return 'Не зарегистрирован';
+        }
+        if (state === States.LOGIN_INPUT) {
+          return 'Запрошен логин';
+        }
+        if (state === States.PASSWORD_INPUT) {
+          return 'Запрошен пароль';
+        }
+        if (state === States.TOKEN_CHECK) {
+          return 'Валидация токена';
+        }
+        if (state === States.REGISTERED) {
+          return 'Зарегистрирован';
+        }
+      }
+
+      await respond(`${user.username ? `Логин ITMO.ID: ${user.username}` : `Вы не вошли в ITMO.ID`}\n`
+        + `Статус токена: ${user.state === States.REGISTERED ? 'ОК' : `${user.token ? 'Не подтверждён' : 'Не запрашивался'}`}\n`
+        + `${!user.autoSections.length ? 'У вас нет секций для автозаписи' : `Автозапись на секции: ${user.autoSections.join(', ')}`}\n`
+        + `Статус пользователя: ${getState(user.state)}`);
+      return;
+    }
+
+    if (message === '/auto') {
+      if (user.state !== States.REGISTERED) {
+        const options: SendMessageOptions = {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: 'Изменить данны для входа', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }],
+              [{ text: 'Обновить токен', callback_data: JSON.stringify({ id: FETCH_TOKEN_CALLBACK }) }]
+            ]
+          }
+        };
+        respond('Функция доступна только для зарегистрированных пользователей', options);
+        return;
+      }
+      const sections = await sportManager.getLessonNames();
+      sections.forEach(async (it) => {
+        const options: SendMessageOptions = {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "Включить автозапись", callback_data: JSON.stringify({ id: AUTO_APPLY_FOR_LESSON_CALLBACK, lesson: it }) }],
+              [{ text: "Выключить автозапись", callback_data: JSON.stringify({ id: AUTO_APPLY_FOR_LESSON_DISABLE_CALLBACK, lesson: it }) }],
+            ]
+          }
+        };
+        await respond(`Автозапись на секцию "${it}"`, options);
+      })
+
+      
     }
 
     if (user.state === States.LOGIN_INPUT) {
@@ -64,8 +131,8 @@ class Bot {
         const options: SendMessageOptions = {
           reply_markup: {
             inline_keyboard: [
-              [{ text: 'Изменить данные', callback_data: REGISTER_CALLBACK }],
-              [{ text: 'Повторить попытку', callback_data: FETCH_TOKEN_CALLBACK }]
+              [{ text: 'Изменить данные', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }],
+              [{ text: 'Повторить попытку', callback_data: JSON.stringify({ id: FETCH_TOKEN_CALLBACK }) }]
             ]
           }
         };
@@ -78,7 +145,8 @@ class Bot {
   private async handleCallbackQuery(callbackQuery: CallbackQuery) {
     const messageId = callbackQuery.message?.message_id;
     const chatId = callbackQuery.message?.chat.id;
-    const data = callbackQuery.data;
+    const data = JSON.parse(callbackQuery.data!!);
+    const callbackId = data.id;
 
     if (!messageId || !chatId || !storage.data[chatId]) {
       return;
@@ -90,7 +158,7 @@ class Bot {
 
     const user = storage.data[chatId] as User;
 
-    if (data === REGISTER_CALLBACK) {
+    if (callbackId === REGISTER_CALLBACK) {
       user.state = States.LOGIN_INPUT;
       user.username = null;
       user.password = null;
@@ -100,12 +168,12 @@ class Bot {
       return;
     }
 
-    if (data === FETCH_TOKEN_CALLBACK) {
+    if (callbackId === FETCH_TOKEN_CALLBACK) {
       if (!user.username || !user.password) {
         const options: SendMessageOptions = {
           reply_markup: {
             inline_keyboard: [
-              [{ text: 'Вход в ITMO.ID', callback_data: REGISTER_CALLBACK }]
+              [{ text: 'Вход в ITMO.ID', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }]
             ]
           }
         };
@@ -122,8 +190,8 @@ class Bot {
         const options: SendMessageOptions = {
           reply_markup: {
             inline_keyboard: [
-              [{ text: 'Изменить данные', callback_data: REGISTER_CALLBACK }],
-              [{ text: 'Повторить попытку', callback_data: FETCH_TOKEN_CALLBACK }]
+              [{ text: 'Изменить данные', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }],
+              [{ text: 'Повторить попытку', callback_data: JSON.stringify({ id: FETCH_TOKEN_CALLBACK }) }]
             ]
           }
         };
@@ -136,8 +204,8 @@ class Bot {
       const options: SendMessageOptions = {
         reply_markup: {
           inline_keyboard: [
-            [{ text: 'Изменить данные', callback_data: REGISTER_CALLBACK }],
-            [{ text: 'Повторить попытку', callback_data: FETCH_TOKEN_CALLBACK }]
+            [{ text: 'Изменить данные', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }],
+            [{ text: 'Повторить попытку', callback_data: JSON.stringify({ id: FETCH_TOKEN_CALLBACK }) }]
           ]
         }
       };
@@ -145,62 +213,115 @@ class Bot {
       return;
     }
 
-    try {
-      const response = await axios.post(SIGN_FOR_SPORT, [Number(data)], {
-        headers: {
-          Authorization: `Bearer ${user.token}`
+    if (callbackId === APPLY_FOR_LESSON_CALLBACK) {
+      try {
+        const response = await axios.post(SIGN_FOR_SPORT, [Number(data.lesson)], {
+          headers: {
+            Authorization: `Bearer ${user.token}`
+          }
+        })
+        if (response.status === 200) {
+          respond("Успешно!");
+        } else {
+          const options: SendMessageOptions = {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: 'Повторить попытку', callback_data: JSON.stringify({ id: APPLY_FOR_LESSON_CALLBACK, lesson: data.lesson }) }],
+                [{ text: 'Изменить данные', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }],
+                [{ text: 'Обновить токен', callback_data: JSON.stringify({ id: FETCH_TOKEN_CALLBACK }) }]
+              ]
+            }
+          };
+          respond(`Ошибка при записи на занятие: ${response.data.error_message ?? "Неизвестная ошибка"}`, options);
         }
-      })
-      if (response.status === 200) {
-        respond("Успешно!");
-      } else {
+      } catch (ex) {
         const options: SendMessageOptions = {
           reply_markup: {
             inline_keyboard: [
-              [{ text: 'Повторить попытку', callback_data: data }],
-              [{ text: 'Изменить данные', callback_data: REGISTER_CALLBACK }],
-              [{ text: 'Обновить токен', callback_data: FETCH_TOKEN_CALLBACK }]
+              [{ text: 'Повторить попытку', callback_data: JSON.stringify({ id: APPLY_FOR_LESSON_CALLBACK, lesson: data.lesson }) }],
+              [{ text: 'Изменить данные', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }],
+              [{ text: 'Обновить токен', callback_data: JSON.stringify({ id: FETCH_TOKEN_CALLBACK }) }]
             ]
           }
         };
-        respond(`Ошибка при записи на занятие: ${response.data.error_message ?? "Неизвестная ошибка"}`, options);
+        respond(`Ошибка при записи на занятие с id:${data.lesson}`, options);
       }
-    } catch(ex) {
-      const options: SendMessageOptions = {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: 'Повторить попытку', callback_data: data }],
-            [{ text: 'Изменить данные', callback_data: REGISTER_CALLBACK }],
-            [{ text: 'Обновить токен', callback_data: FETCH_TOKEN_CALLBACK }]
-          ]
-        }
-      };
-      respond(`Ошибка при записи на занятие с id:${data}`, options);
+    }
+
+    if (callbackId === AUTO_APPLY_FOR_LESSON_CALLBACK) {
+      respond(`${user.addAutoSection(data.lesson) ? `Автозапись на "${data.lesson}" включена` : `Автозапись на "${data.lesson}" уже была включена`}`)
+      storage.writeData();
+      return
+    }
+    if (callbackId ===AUTO_APPLY_FOR_LESSON_DISABLE_CALLBACK) {
+      user.removeAutoSection(data.lesson)
+      storage.writeData();
+      respond(`Автозапись на ${data.lesson} отключена`)
+      return
     }
   }
 
-  async broadcast(message: string, id?: string) {
-    Object.keys(storage.data).forEach(chatId => {
+  async broadcast(message: string, name: string, id?: string) {
+    Object.keys(storage.data).forEach(async chatId => {
       const user = storage.data[chatId] as User;
       if (user.state === States.UNREGISTERED) {
         const options: SendMessageOptions = {
           reply_markup: {
             inline_keyboard: [
-              [{ text: 'Вход в ITMO.ID', callback_data: REGISTER_CALLBACK }]
+              [{ text: 'Вход в ITMO.ID', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }]
             ]
           }
         };
-        this.instance?.sendMessage(chatId, message, options);
+        await this.instance?.sendMessage(chatId, message, options);
       }
       if (user.state === States.REGISTERED) {
+
         const options: SendMessageOptions = {
           reply_markup: {
             inline_keyboard: [
-              [{ text: 'Записаться на занятие', callback_data: id }]
+              [{ text: 'Записаться на занятие', callback_data: JSON.stringify({ id: APPLY_FOR_LESSON_CALLBACK, lesson: id }) }]
             ]
           }
         };
         this.instance?.sendMessage(chatId, message, id ? options : undefined);
+        if (user.autoSections.includes(name)) {
+          if (!id) {
+            return;
+          }
+          this.instance?.sendMessage(chatId, `Попытка автоматической записи на занятие "${name}", ID: ${id}`);
+          try {
+            const response = await axios.post(SIGN_FOR_SPORT, [Number(id)], {
+              headers: {
+                Authorization: `Bearer ${user.token}`
+              }
+            })
+            if (response.status === 200) {
+              this.instance?.sendMessage(chatId, "Успешно!");
+            } else {
+              const options: SendMessageOptions = {
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: 'Повторить попытку', callback_data: JSON.stringify({ id: APPLY_FOR_LESSON_CALLBACK, lesson: id }) }],
+                    [{ text: 'Изменить данные', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }],
+                    [{ text: 'Обновить токен', callback_data: JSON.stringify({ id: FETCH_TOKEN_CALLBACK }) }]
+                  ]
+                }
+              };
+              this.instance?.sendMessage(chatId, `Ошибка при записи на занятие: ${response.data.error_message ?? "Неизвестная ошибка"}`, options);
+            }
+          } catch (ex) {
+            const options: SendMessageOptions = {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: 'Повторить попытку', callback_data: JSON.stringify({ id: APPLY_FOR_LESSON_CALLBACK, lesson: id }) }],
+                  [{ text: 'Изменить данные', callback_data: JSON.stringify({ id: REGISTER_CALLBACK }) }],
+                  [{ text: 'Обновить токен', callback_data: JSON.stringify({ id: FETCH_TOKEN_CALLBACK }) }]
+                ]
+              }
+            };
+            this.instance?.sendMessage(chatId, `Ошибка при записи на занятие с id:${id}`, options);
+          }
+        }
       }
     })
   }
@@ -215,6 +336,11 @@ class Bot {
     console.log('[ INFO ] Bot is set up');
     this.instance.on('message', (msg: Message) => this.handleMessage(msg));
     this.instance.on('callback_query', (callbackQuery: CallbackQuery) => this.handleCallbackQuery(callbackQuery));
+    this.instance.setMyCommands([
+      { command: 'help', description: 'Показать меню с информацией' },
+      { command: 'profile', description: 'Показать информацию о профиле' },
+      { command: 'auto', description: 'Открыть меню автозаписи' },
+    ]);
   }
 
 };

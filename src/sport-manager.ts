@@ -64,15 +64,10 @@ class SportManager {
     }, FETCH_INTERVAL)
   }
 
-  async broadcastMessage() {
-    
-  }
-
   async getConfig() {
     if (!this.host) {
       return;
     }
-    const oldToken = this.host.token;
     try {
       if (!this.host.token) {
         this.host.getToken();
@@ -162,7 +157,7 @@ class SportManager {
           const msg = `На занятии кончились места!\n`
             + `${item.section_name} ${formatDate(item.date)} в ${item.time_slot_start} у преподавателя ${item.teacher_fio}\n`
             + `${item.type_name}`;
-          bot.broadcast(msg);
+          bot.broadcast(msg, item.section_name);
         }
       });
 
@@ -173,7 +168,7 @@ class SportManager {
           const msg = `На занятии есть места (${item.available} / ${item.limit})!\n`
             + `${item.section_name} ${formatDate(item.date)} в ${item.time_slot_start} у преподавателя ${item.teacher_fio}\n`
             + `${item.type_name}`;
-          bot.broadcast(msg, item.id); 
+          bot.broadcast(msg, item.section_name, item.id); 
         }
       });
       this.map = mapped_ok as Map<number, Lesson>;
@@ -181,6 +176,11 @@ class SportManager {
       console.error(e);
     }
   };
+
+  async getLessonNames() {
+    const lessons = (await this.getLessons() as Lesson[]).map(lesson => lesson.section_name);
+    return Array.from(new Set(lessons));
+  }
 }
 
 export default new SportManager();

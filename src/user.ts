@@ -13,6 +13,7 @@ class User {
   username: string | null = null;
   password: string | null = null;
   state: States = States.UNREGISTERED;
+  autoSections: string[] = [];
 
   token: string | null = null;
 
@@ -59,6 +60,23 @@ class User {
     }
 
     return this.token;
+  }
+
+  addAutoSection(section: string) {
+    console.log(section)
+    if (new Set(this.autoSections).has(section)) {
+      return false;
+    } 
+    this.autoSections = [...this.autoSections, section]; 
+    return true;
+  }
+
+  removeAutoSection(section: string) {
+    this.autoSections = this.autoSections.filter(it => it != section);
+  }
+
+  clearAutoSections() {
+    this.autoSections = [];
   }
 };
 
