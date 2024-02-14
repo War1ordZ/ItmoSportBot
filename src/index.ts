@@ -1,6 +1,6 @@
 import bot from "./bot";
-import sportManager from "./sport-manager";
-import storage from "./storage-handler";
+import sportManager from "./SportManager";
+import storage from "./StorageHandler";
 
 const main = async () => {
   storage.readData();
