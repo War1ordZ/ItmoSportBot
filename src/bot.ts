@@ -1,10 +1,10 @@
 import TelegramBot, { CallbackQuery, Message, SendMessageOptions } from "node-telegram-bot-api";
 import dotenv from 'dotenv';
 import storage from './StorageHandler'
-import User, { States } from "./User";
 import { SIGN_FOR_SPORT } from "./constants";
 import axios from "axios";
 import sportManager from "./SportManager";
+import User, { States } from "./User";
 
 const REGISTER_CALLBACK = 'register'
 const FETCH_TOKEN_CALLBACK = 'fetch_token'
