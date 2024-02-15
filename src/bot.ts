@@ -1,7 +1,7 @@
 import TelegramBot, { CallbackQuery, Message, SendMessageOptions } from "node-telegram-bot-api";
 import dotenv from 'dotenv';
 import storage from './StorageHandler'
-import { SIGN_FOR_SPORT } from "./constants";
+import { SIGN_FOR_SPORT } from "./Constants";
 import axios from "axios";
 import sportManager from "./SportManager";
 import User, { States } from "./User";

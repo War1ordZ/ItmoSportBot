@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer';
-import { LOGIN_PAGE, SCHEDULE_PAGE, TOKEN_COOKIE_NAME } from './constants';
+import { LOGIN_PAGE, SCHEDULE_PAGE, TOKEN_COOKIE_NAME } from './Constants';
 
 export enum States {
   UNREGISTERED,

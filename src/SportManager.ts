@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import User from "./User";
 import _ from 'lodash';
 import axios from 'axios';
-import { AVAILABLE_SPORT_URL, FETCH_INTERVAL, SPORT_DEBT_URL } from './constants';
+import { AVAILABLE_SPORT_URL, FETCH_INTERVAL, SPORT_DEBT_URL } from './Constants';
 import bot from './bot';
 
 type Lesson = {
