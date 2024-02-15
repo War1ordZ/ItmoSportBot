@@ -9,11 +9,16 @@ export enum States {
   REGISTERED
 }
 
+export const DAYS = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресение'];
+export const TIMES = ['8:20', '10:00', '11:40', '13:30', '15:20', '17:00', '18:40', '20:20']
+
 class User {
   username: string | null = null;
   password: string | null = null;
   state: States = States.UNREGISTERED;
   autoSections: string[] = [];
+  autoDays: string[] = [...DAYS];
+  autoTime: string[] = [...TIMES];
 
   token: string | null = null;
 
