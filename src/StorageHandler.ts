@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import User from './User';
-import { BOT_DATA_FILENAME } from './constants';
+import { BOT_DATA_FILENAME } from './Constants';
 
 const FILE_ENCODING = 'utf8'
 

@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
-import User from "./User";
+import User, { DAYS } from "./User";
 import _ from 'lodash';
 import axios from 'axios';
-import { AVAILABLE_SPORT_URL, FETCH_INTERVAL, SPORT_DEBT_URL } from './constants';
+import { AVAILABLE_SPORT_URL, FETCH_INTERVAL, SPORT_DEBT_URL } from './Constants';
 import bot from './bot';
 
 type Lesson = {
@@ -157,7 +157,7 @@ class SportManager {
           const msg = `На занятии кончились места!\n`
             + `${item.section_name} ${formatDate(item.date)} в ${item.time_slot_start} у преподавателя ${item.teacher_fio}\n`
             + `${item.type_name}`;
-          bot.broadcast(msg, item.section_name);
+          bot.broadcast(msg, item.section_name, item.time_slot_start, DAYS[(new Date(item.date).getDay() + 6) % 7]);
         }
       });
 
@@ -168,7 +168,7 @@ class SportManager {
           const msg = `На занятии есть места (${item.available} / ${item.limit})!\n`
             + `${item.section_name} ${formatDate(item.date)} в ${item.time_slot_start} у преподавателя ${item.teacher_fio}\n`
             + `${item.type_name}`;
-          bot.broadcast(msg, item.section_name, item.id); 
+          bot.broadcast(msg, item.section_name, item.time_slot_start, DAYS[(new Date(item.date).getDay() + 6) % 7], item.id); 
         }
       });
       this.map = mapped_ok as Map<number, Lesson>;

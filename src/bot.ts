@@ -1,16 +1,21 @@
-import TelegramBot, { CallbackQuery, Message, SendMessageOptions } from "node-telegram-bot-api";
+import TelegramBot, { CallbackQuery, EditMessageCaptionOptions, EditMessageReplyMarkupOptions, Message, SendMessageOptions } from "node-telegram-bot-api";
 import dotenv from 'dotenv';
 import storage from './StorageHandler'
-import { SIGN_FOR_SPORT } from "./constants";
-import axios from "axios";
+import { SIGN_FOR_SPORT } from "./Constants";
+import axios, { Axios, AxiosResponse } from "axios";
 import sportManager from "./SportManager";
-import User, { States } from "./User";
+import User, { DAYS, States, TIMES } from "./User";
 
-const REGISTER_CALLBACK = 'register'
-const FETCH_TOKEN_CALLBACK = 'fetch_token'
-const APPLY_FOR_LESSON_CALLBACK = 'apply_for_lesson'
-const AUTO_APPLY_FOR_LESSON_CALLBACK = 'aafl'
-const AUTO_APPLY_FOR_LESSON_DISABLE_CALLBACK = 'daafl'
+const REGISTER_CALLBACK = 'register';
+const FETCH_TOKEN_CALLBACK = 'fetch_token';
+const APPLY_FOR_LESSON_CALLBACK = 'apply_for_lesson';
+const SHOW_AUTO_MENU_CALLBACK = 'auto_menu'
+const TOGGLE_AUTO_DAY_CALLBACK = 'Z'
+const TOGGLE_AUTO_TIME_CALLBACK = 'X'
+const SHOW_AUTO_TIME_MENU_CALLBACK = 'time_auto_menu'
+const SHOW_AUTO_DAY_MENU_CALLBACK = 'day_auto_menu'
+const AUTO_APPLY_FOR_LESSON_CALLBACK = 'aafl';
+const AUTO_APPLY_FOR_LESSON_DISABLE_CALLBACK = 'daafl';
 
 class Bot {
   instance: TelegramBot | null = null;
@@ -90,20 +95,17 @@ class Bot {
         respond('Функция доступна только для зарегистрированных пользователей', options);
         return;
       }
-      const sections = await sportManager.getLessonNames();
-      sections.forEach(async (it) => {
-        const options: SendMessageOptions = {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "Включить автозапись", callback_data: JSON.stringify({ id: AUTO_APPLY_FOR_LESSON_CALLBACK, lesson: it }) }],
-              [{ text: "Выключить автозапись", callback_data: JSON.stringify({ id: AUTO_APPLY_FOR_LESSON_DISABLE_CALLBACK, lesson: it }) }],
-            ]
-          }
-        };
-        await respond(`Автозапись на секцию "${it}"`, options);
-      })
-
-      
+      const options: SendMessageOptions = {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "Вывести список предметов", callback_data: JSON.stringify({ id: SHOW_AUTO_MENU_CALLBACK }) }],
+            [{ text: "Настройки автозаписи по времени", callback_data: JSON.stringify({ id: SHOW_AUTO_TIME_MENU_CALLBACK }) }],
+            [{ text: "Настройки автозаписи по дням", callback_data: JSON.stringify({ id: SHOW_AUTO_DAY_MENU_CALLBACK }) }],
+          ]
+        }
+      };
+      await respond("Выберите опцию", options);
+      return;
     }
 
     if (user.state === States.LOGIN_INPUT) {
@@ -213,6 +215,108 @@ class Bot {
       return;
     }
 
+    if (callbackId === SHOW_AUTO_MENU_CALLBACK) {
+      const sections = await sportManager.getLessonNames();
+      sections.forEach(async (it) => {
+        const options: SendMessageOptions = {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "Включить автозапись", callback_data: JSON.stringify({ id: AUTO_APPLY_FOR_LESSON_CALLBACK, lesson: it }) }],
+              [{ text: "Выключить автозапись", callback_data: JSON.stringify({ id: AUTO_APPLY_FOR_LESSON_DISABLE_CALLBACK, lesson: it }) }],
+            ]
+          }
+        };
+        await respond(`Автозапись на секцию "${it}"`, options);
+      })
+      return;
+    }
+
+    if (callbackId === SHOW_AUTO_DAY_MENU_CALLBACK) {
+      const options: SendMessageOptions = {
+        reply_markup: {
+          inline_keyboard: [
+            ...DAYS.map((it, index) => 
+              [{ text: `${it} ${user.autoDays.includes(it) ? '✅' : '❌'}`, callback_data: JSON.stringify({ id: TOGGLE_AUTO_DAY_CALLBACK, day: index, message: null, chat: chatId }) }]
+            )
+          ]
+        }
+      };
+      await respond(`Настройка дней`, options);
+      return;
+    }
+
+    if (callbackId === TOGGLE_AUTO_DAY_CALLBACK) {
+      const day = DAYS[data.day];
+      const chat = data.chat;
+      const message = data.message ?? messageId;
+
+      if (user.autoDays.includes(day)) {
+        user.autoDays = user.autoDays.filter(it => it !== day); 
+      } else {
+        user.autoDays.push(day);
+      }
+      storage.writeData();
+
+      const options: EditMessageReplyMarkupOptions = {
+        chat_id: chat,
+        message_id: message,
+        inline_message_id: message
+      };
+
+      this.instance?.editMessageReplyMarkup({
+        inline_keyboard: [
+          ...DAYS.map((it, index) => 
+            [{ text: `${it} ${user.autoDays.includes(it) ? '✅' : '❌'}`, callback_data: JSON.stringify({ id: TOGGLE_AUTO_DAY_CALLBACK, day: index, message: message, chat: chat  }) }]
+          )
+        ]
+      }, options);
+
+      return;
+    }
+
+    if (callbackId === SHOW_AUTO_TIME_MENU_CALLBACK) {
+      const options: SendMessageOptions = {
+        reply_markup: {
+          inline_keyboard: [
+            ...TIMES.map((it, index) => 
+              [{ text: `${it} ${user.autoTime.includes(it) ? '✅' : '❌'}`, callback_data: JSON.stringify({ id: TOGGLE_AUTO_TIME_CALLBACK, day: index, message: null, chat: chatId }) }]
+            )
+          ]
+        }
+      };
+      await respond(`Настройка времени`, options);
+      return;
+    }
+
+    if (callbackId === TOGGLE_AUTO_TIME_CALLBACK) {
+      const time = TIMES[data.time]; 
+      const chat = data.chat;
+      const message = data.message ?? messageId;
+
+      if (user.autoTime.includes(time)) {
+        user.autoTime = user.autoTime.filter(it => it !== time); 
+      } else {
+        user.autoTime.push(time);
+      }
+      storage.writeData();
+
+      const options: EditMessageReplyMarkupOptions = {
+        chat_id: chat,
+        message_id: message,
+        inline_message_id: message
+      };
+
+      this.instance?.editMessageReplyMarkup({
+        inline_keyboard: [
+          ...TIMES.map((it, index) => 
+            [{ text: `${it} ${user.autoTime.includes(it) ? '✅' : '❌'}`, callback_data: JSON.stringify({ id: TOGGLE_AUTO_TIME_CALLBACK, time: index, message: message, chat: chat  }) }]
+          )
+        ]
+      }, options);
+
+      return;
+    }
+
     if (callbackId === APPLY_FOR_LESSON_CALLBACK) {
       try {
         const response = await axios.post(SIGN_FOR_SPORT, [Number(data.lesson)], {
@@ -234,7 +338,7 @@ class Bot {
           };
           respond(`Ошибка при записи на занятие: ${response.data.error_message ?? "Неизвестная ошибка"}`, options);
         }
-      } catch (ex) {
+      } catch (ex : any) {
         const options: SendMessageOptions = {
           reply_markup: {
             inline_keyboard: [
@@ -244,7 +348,7 @@ class Bot {
             ]
           }
         };
-        respond(`Ошибка при записи на занятие с id:${data.lesson}`, options);
+        this.instance?.sendMessage(chatId, `Ошибка при записи на занятие: ${ex.response.data.error_message}`, options);
       }
     }
 
@@ -261,7 +365,7 @@ class Bot {
     }
   }
 
-  async broadcast(message: string, name: string, id?: string) {
+  async broadcast(message: string, name: string, time_start: string, day: string, id?: string) {
     Object.keys(storage.data).forEach(async chatId => {
       const user = storage.data[chatId] as User;
       if (user.state === States.UNREGISTERED) {
@@ -275,7 +379,6 @@ class Bot {
         await this.instance?.sendMessage(chatId, message, options);
       }
       if (user.state === States.REGISTERED) {
-
         const options: SendMessageOptions = {
           reply_markup: {
             inline_keyboard: [
@@ -284,7 +387,7 @@ class Bot {
           }
         };
         this.instance?.sendMessage(chatId, message, id ? options : undefined);
-        if (user.autoSections.includes(name)) {
+        if (user.autoSections.includes(name) && user.autoTime.includes(time_start) && user.autoDays.includes(day)) {
           if (!id) {
             return;
           }
@@ -309,7 +412,7 @@ class Bot {
               };
               this.instance?.sendMessage(chatId, `Ошибка при записи на занятие: ${response.data.error_message ?? "Неизвестная ошибка"}`, options);
             }
-          } catch (ex) {
+          } catch (ex : any) {
             const options: SendMessageOptions = {
               reply_markup: {
                 inline_keyboard: [
@@ -319,7 +422,7 @@ class Bot {
                 ]
               }
             };
-            this.instance?.sendMessage(chatId, `Ошибка при записи на занятие с id:${id}`, options);
+            this.instance?.sendMessage(chatId, `Ошибка при записи на занятие: ${ex.response.data.error_message}`, options);
           }
         }
       }
