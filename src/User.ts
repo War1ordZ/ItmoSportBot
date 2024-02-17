@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer';
-import { LOGIN_PAGE, SCHEDULE_PAGE, TOKEN_COOKIE_NAME } from './Constants';
+import { LOGIN_PAGE, SCHEDULE_PAGE, TOKEN_COOKIE_NAME, TOKEN_FETCH_INTERVAL } from './Constants';
 
 export enum States {
   UNREGISTERED,
@@ -25,6 +25,10 @@ class User {
   constructor(username?: string, password?: string) {
     this.username = username ?? null;
     this.password = password ?? null;
+
+    setInterval(async () => {
+      this.token = await this.fetchToken() ?? this.token;
+    }, TOKEN_FETCH_INTERVAL);
   }
 
   private async getCookies() {

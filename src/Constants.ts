@@ -10,3 +10,4 @@ export const TOKEN_COOKIE_NAME = 'auth._token.itmoId';
 export const BOT_DATA_FILENAME = 'userdata.json'
 
 export const FETCH_INTERVAL = 1000;
+export const TOKEN_FETCH_INTERVAL = 15000;
