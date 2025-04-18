@@ -10,7 +10,7 @@ export enum States {
 }
 
 export const DAYS = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресение'];
-export const TIMES = ['8:20', '10:00', '11:40', '13:30', '15:20', '17:00', '18:40', '20:20']
+export const TIMES = ['8:10', '9:50', '11:30', '13:30', '15:30', '17:00', '19:00', '21:00']
 
 class User {
   username: string | null = null;
@@ -42,15 +42,15 @@ class User {
     );
     const page = await browser.newPage();
     await page.goto(LOGIN_PAGE, { waitUntil: 'networkidle0' });
-    delay(1000);
+    await delay(1000);
     await page.type('#username', this.username || '');
     await page.type('#password', this.password || '');
     await page.type('#rememberMe', 'on');
-    delay(1000);
+    await delay(1000);
     await Promise.all([page.click('#kc-login'), page.waitForNavigation()]);
 
     await page.goto(SCHEDULE_PAGE, {
-      waitUntil: 'domcontentloaded',
+      waitUntil: 'networkidle2',
     });
 
     const cookies = await page.cookies();
@@ -59,8 +59,16 @@ class User {
   };
 
   async fetchToken(): Promise<string | null> {
-    const [tokenCookie] = (await this.getCookies()).filter(cookie => cookie.name === TOKEN_COOKIE_NAME);
-    return tokenCookie?.value.substring(9);
+    for (let id = 1; id <= 5; id++) {
+      const [tokenCookie] = (await this.getCookies()).filter(cookie => cookie.name === TOKEN_COOKIE_NAME);
+      const val = tokenCookie?.value.substring(9);
+      if (!val) {
+        console.warn(`try ${id} failed...`)
+        continue;
+      }
+      return val;
+    }
+    return null;
   }
 
   async getToken() {
@@ -76,8 +84,8 @@ class User {
     console.log(section)
     if (new Set(this.autoSections).has(section)) {
       return false;
-    } 
-    this.autoSections = [...this.autoSections, section]; 
+    }
+    this.autoSections = [...this.autoSections, section];
     return true;
   }
 

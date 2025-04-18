@@ -386,12 +386,13 @@ class Bot {
             ]
           }
         };
-        this.instance?.sendMessage(chatId, message, id ? options : undefined);
+
         if (user.autoSections.includes(name) && user.autoTime.includes(time_start) && user.autoDays.includes(day)) {
           if (!id) {
             return;
           }
-          this.instance?.sendMessage(chatId, `Попытка автоматической записи на занятие "${name}", ID: ${id}`);
+          this.instance?.sendMessage(chatId, message, id ? options : undefined);
+          this.instance?.sendMessage(chatId, `Попытка автоматической записи на занятие "${name}", ID: ${id} ${time_start} ${day}`);
           try {
             const response = await axios.post(SIGN_FOR_SPORT, [Number(id)], {
               headers: {
@@ -422,7 +423,7 @@ class Bot {
                 ]
               }
             };
-            this.instance?.sendMessage(chatId, `Ошибка при записи на занятие: ${ex.response.data.error_message}`, options);
+            this.instance?.sendMessage(chatId, `Ошибка при записи на занятие: ${ex.response.data.error_message} "${name}", ID: ${id} ${time_start} ${day}`, options);
           }
         }
       }

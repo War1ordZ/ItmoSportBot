@@ -4,6 +4,7 @@ import _ from 'lodash';
 import axios from 'axios';
 import { AVAILABLE_SPORT_URL, FETCH_INTERVAL, SPORT_DEBT_URL } from './Constants';
 import bot from './bot';
+import moment from 'moment';
 
 type Lesson = {
   id: number;
@@ -49,7 +50,7 @@ class SportManager {
     if (!username || !password) {
       throw "ITMO host username or password is not present in dotenv file"
     }
-    this.host = await new User(username, password);
+    this.host = new User(username, password);
     const res = await this.host.fetchToken();
     if (res == null) {
       throw "Invalid credentials"
@@ -101,14 +102,15 @@ class SportManager {
 
   async getLessons() {
     const { data } = await axios.get(
-      `${AVAILABLE_SPORT_URL}?building_id=273&date_start=2024-01-01&date_end=2077-01-01`,
+      `${AVAILABLE_SPORT_URL}?building_id=273&date_start=${moment().format(
+        'YYYY-MM-DD'
+      )}&date_end=${moment().add(21, 'days').format('YYYY-MM-DD')}`,
       await this.getConfig()
     );
 
     const lessons = data?.result.flatMap(
       (item: { lessons: any }) => item.lessons
-    );
-
+    ).filter((item: any) => item != null);
     return lessons;
   };
 
@@ -121,7 +123,7 @@ class SportManager {
 
     all = all.filter(
       item =>
-        item.type_name.includes('задолженност') &&
+        // item.type_name.includes('задолженност') &&
         item.room_name.includes('ул.Ломоносова') &&
         new Date(item.date) > new Date()
     );
@@ -168,12 +170,12 @@ class SportManager {
           const msg = `На занятии есть места (${item.available} / ${item.limit})!\n`
             + `${item.section_name} ${formatDate(item.date)} в ${item.time_slot_start} у преподавателя ${item.teacher_fio}\n`
             + `${item.type_name}`;
-          bot.broadcast(msg, item.section_name, item.time_slot_start, DAYS[(new Date(item.date).getDay() + 6) % 7], item.id); 
+          bot.broadcast(msg, item.section_name, item.time_slot_start, DAYS[(new Date(item.date).getDay() + 6) % 7], item.id);
         }
       });
       this.map = mapped_ok as Map<number, Lesson>;
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error(e.message);
     }
   };
 
