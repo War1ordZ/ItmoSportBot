@@ -34,9 +34,15 @@ class User {
   private async getCookies() {
     const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
+    // Get Puppeteer arguments from environment or use defaults
+    let puppeteerArgs = ['--no-sandbox'];
+    if (process.env.PUPPETEER_ARGS) {
+      puppeteerArgs = process.env.PUPPETEER_ARGS.split(',');
+    }
+
     const browser = await puppeteer.launch(
       {
-        args: ['--no-sandbox'],
+        args: puppeteerArgs,
         headless: 'new',
       }
     );

@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "sus": "node ./src/index.js",
-    "preinstall": "npx puppeteer browsers install chrome",
+    "install-browser": "npx puppeteer browsers install chrome",
     "start": "node ./dist/index.js",
     "build": "tsc -w --preserveWatchOutput",
+    "build:docker": "tsc",
     "serve": "nodemon --watch dist ./dist/index.js",
     "dev": "concurrently \"npm:build\" \"npm:serve\""
   },
